@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pitchumani/activity-tracker/server"
+	"github.com/pitchumani/activity-tracker/activity-log/internal/server"
 	"log"
 )
 
