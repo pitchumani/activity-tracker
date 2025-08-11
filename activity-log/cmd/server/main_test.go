@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	api "github.com/pitchumani/activity-tracker/activity-log"
 	"github.com/pitchumani/activity-tracker/activity-log/internal/server"
 )
 
@@ -34,8 +35,8 @@ func TestNewHTTPServer_Integration(t *testing.T) {
 	defer ts.Close()
 
 	// POST an activity
-	activity := server.Activity{Description: "Integration test", Time: time.Now()}
-	body, _ := json.Marshal(server.ActivityDocument{Activity: activity})
+	activity := api.Activity{Description: "Integration test", Time: time.Now()}
+	body, _ := json.Marshal(api.ActivityDocument{Activity: activity})
 	resp, err := http.Post(ts.URL+"/", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("POST error: %v", err)
@@ -44,7 +45,7 @@ func TestNewHTTPServer_Integration(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("POST status: got %d, want %d", resp.StatusCode, http.StatusOK)
 	}
-	var idDoc server.IDDocument
+	var idDoc api.IDDocument
 	if err := json.NewDecoder(resp.Body).Decode(&idDoc); err != nil {
 		t.Fatalf("decode POST response: %v", err)
 	}
@@ -53,7 +54,7 @@ func TestNewHTTPServer_Integration(t *testing.T) {
 	}
 
 	// GET the activity
-	idBody, _ := json.Marshal(server.IDDocument{ID: idDoc.ID})
+	idBody, _ := json.Marshal(api.IDDocument{ID: idDoc.ID})
 	getReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/", bytes.NewReader(idBody))
 	getReq.Header.Set("Content-Type", "application/json")
 	getResp, err := http.DefaultClient.Do(getReq)
@@ -64,7 +65,7 @@ func TestNewHTTPServer_Integration(t *testing.T) {
 	if getResp.StatusCode != http.StatusOK {
 		t.Fatalf("GET status: got %d, want %d", getResp.StatusCode, http.StatusOK)
 	}
-	var got server.ActivityDocument
+	var got api.ActivityDocument
 	if err := json.NewDecoder(getResp.Body).Decode(&got); err != nil {
 		t.Fatalf("decode GET response: %v", err)
 	}

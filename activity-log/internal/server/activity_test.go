@@ -8,11 +8,13 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	api "github.com/pitchumani/activity-tracker/activity-log"
 )
 
 func TestActivities_InsertAndRetrieve(t *testing.T) {
 	acts := &Activities{}
-	activity := Activity{Description: "Test activity", Time: time.Now()}
+	activity := api.Activity{Description: "Test activity", Time: time.Now()}
 	id := acts.Insert(activity)
 	if id != 1 {
 		t.Errorf("expected id 1, got %d", id)
@@ -49,8 +51,8 @@ func TestHTTPServer_PostAndGet(t *testing.T) {
 	defer ts.Close()
 
 	// POST
-	activity := Activity{Description: "Test via HTTP", Time: time.Now()}
-	adoc := ActivityDocument{Activity: activity}
+	activity := api.Activity{Description: "Test via HTTP", Time: time.Now()}
+	adoc := api.ActivityDocument{Activity: activity}
 	body, _ := json.Marshal(adoc)
 	resp, err := http.Post(ts.URL+"/", "application/json", bytes.NewReader(body))
 	if err != nil {
@@ -60,7 +62,7 @@ func TestHTTPServer_PostAndGet(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("POST status: got %d, want %d", resp.StatusCode, http.StatusOK)
 	}
-	var idDoc IDDocument
+	var idDoc api.IDDocument
 	if err := json.NewDecoder(resp.Body).Decode(&idDoc); err != nil {
 		t.Fatalf("decode POST response: %v", err)
 	}
@@ -69,7 +71,7 @@ func TestHTTPServer_PostAndGet(t *testing.T) {
 	}
 
 	// GET
-	idBody, _ := json.Marshal(IDDocument{ID: idDoc.ID})
+	idBody, _ := json.Marshal(api.IDDocument{ID: idDoc.ID})
 	getReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/", bytes.NewReader(idBody))
 	getReq.Header.Set("Content-Type", "application/json")
 	getResp, err := http.DefaultClient.Do(getReq)
@@ -80,7 +82,7 @@ func TestHTTPServer_PostAndGet(t *testing.T) {
 	if getResp.StatusCode != http.StatusOK {
 		t.Fatalf("GET status: got %d, want %d", getResp.StatusCode, http.StatusOK)
 	}
-	var got ActivityDocument
+	var got api.ActivityDocument
 	if err := json.NewDecoder(getResp.Body).Decode(&got); err != nil {
 		t.Fatalf("decode GET response: %v", err)
 	}
@@ -101,7 +103,7 @@ func TestHTTPServer_GetNotFound(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	idBody, _ := json.Marshal(IDDocument{ID: 42})
+	idBody, _ := json.Marshal(api.IDDocument{ID: 42})
 	getReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/", bytes.NewReader(idBody))
 	getReq.Header.Set("Content-Type", "application/json")
 	getResp, err := http.DefaultClient.Do(getReq)

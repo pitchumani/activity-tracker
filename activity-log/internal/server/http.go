@@ -4,18 +4,10 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"net/http"
+
+	api "github.com/pitchumani/activity-tracker/activity-log"
 )
 
-// define types for APIs (get and post activity info)
-// included the json encoding field in the type itself
-type IDDocument struct {
-	ID uint64 `json:"id"`
-}
-
-type ActivityDocument struct {
-	Activity Activity `json:"activity"`
-}
-	
 // define type httpServer with activities data
 // add Methods to that type to handle GET and POST requests
 
@@ -24,7 +16,7 @@ type httpServer struct {
 }
 
 func (s *httpServer) handlePost(w http.ResponseWriter, r *http.Request) {
-	var req ActivityDocument
+	var req api.ActivityDocument
 	// decode the request body - assuming json of type ActivityDocument
 	err := json.NewDecoder(r.Body).Decode(&req)
 	// if couldn't decode to desired type, write error into response
@@ -35,13 +27,13 @@ func (s *httpServer) handlePost(w http.ResponseWriter, r *http.Request) {
 	// add the activity to the database
 	id := s.Activities.Insert(req.Activity)
 	// create the response - IDDocument
-	res := IDDocument{ID: id}
+	res := api.IDDocument{ID: id}
 	// write the response
 	json.NewEncoder(w).Encode(res)
 }
 
 func (s *httpServer) handleGet(w http.ResponseWriter, r *http.Request) {
-	var req IDDocument
+	var req api.IDDocument
 	// decode the request body - assuming json of type IDDocument
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -55,7 +47,7 @@ func (s *httpServer) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// create response with retrieve activity info
-	res := ActivityDocument{Activity: activity}
+	res := api.ActivityDocument{Activity: activity}
 	json.NewEncoder(w).Encode(res)
 }
 
