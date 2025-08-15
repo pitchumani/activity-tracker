@@ -19,6 +19,7 @@ const defaultURL = "http://localhost:8080/"
 func main() {
 	add := flag.Bool("add", false, "Add activity")
 	get := flag.Bool("get", false, "Get activities")
+	list := flag.Bool("list", false, "Get activities from offset id")
 	flag.Parse()
 
 	activitiesClient := &client.Activities{URL: defaultURL}
@@ -58,6 +59,25 @@ func main() {
 			os.Exit(1)
 		}
 		log.Printf("Added: %s as %d\n", asString(a), id)
+	case *list:
+		// list option
+		if len(os.Args) != 3 {
+			log.Fatal("Usage: -list id_offset");
+			os.Exit(1)
+		}
+		offset, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			log.Fatal("Error: Invalid offset value")
+			os.Exit(1)
+		}
+		acts, err := activitiesClient.List(offset)
+		if err != nil {
+			log.Fatalf("Error: %s", err.Error())
+			os.Exit(1)
+		}
+		for _, act := range acts {
+			fmt.Printf("%s\n", asString(act))
+		}
 	default:
 		flag.Usage()
 		os.Exit(1)

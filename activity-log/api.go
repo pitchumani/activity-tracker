@@ -18,3 +18,6 @@ type IDDocument struct {
 	ID int `json:"id"`
 }
 
+type ActivityQueryDocument struct {
+	Offset int `json:"activities"`
+}
