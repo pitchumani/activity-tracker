@@ -84,3 +84,34 @@ func (c *Activities) Retrieve(id int) (api.Activity, error) {
 	}
 	return document.Activity, nil
 }
+
+func (c *Activities) List(offset int) ([]api.Activity, error) {
+	qDoc := api.ActivityQueryDocument{Offset: offset}
+	jsBytes, err := json.Marshal(qDoc)
+	if err != nil {
+		return nil, err
+	}
+	reader := bytes.NewReader(jsBytes)
+	req, err := http.NewRequest(http.MethodGet, c.URL+"/list", reader)
+	if err != nil {
+		return nil, err
+	}
+	// send the request
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode == 404 {
+		return nil, errors.New("Not Found")
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	var list []api.Activity
+	err = json.Unmarshal(body, &list)
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
