@@ -1,24 +1,72 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"net/http"
-	
-	api "github.com/pitchumani/activity-tracker/activity-log"
+	"context"
+	"fmt"
+	"log"
+
+	api "github.com/pitchumani/activity-tracker/activity-log/api/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
-// client needs server URL to make requests
-// define type Activities with URL as string member
+// moving to grpc client, log client should be used (generated
+// by protoc for .proto file already)
 type Activities struct {
-	URL string
+	client api.Activity_LogClient
+}
+
+var ErrIDNotFound = fmt.Errorf("ID not found")
+
+// initialize client with action connection
+func NewActivities(URL string) Activities {
+	conn, err := grpc.Dial(URL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Did not connect: %v", err.Error())
+	}
+	client := api.NewActivity_LogClient(conn)
+	return Activities{client: client}
 }
 
 // define Methods to Activities
-// insert and retrieve
+func (c *Activities) Insert(ctx context.Context, activity *api.Activity) (int, error) {
+	res, err := c.client.Insert(ctx, activity)
+	if err != nil {
+		return 0, fmt.Errorf("Insert error: %v", err.Error())
+	}
+	// InsertResponse messge in proto will be the response
+	// use Get<FieldName> functions to retrieve it
+	return int(res.GetId()), nil
+}
 
+func (c *Activities) Retrieve(ctx context.Context, id int) (*api.Activity, error) {
+	res, err := c.client.Retrieve(ctx, &api.RetrieveRequest{Id: int32(id)})
+	if err != nil {
+		st, _ := status.FromError(err)
+		if st.Code() == codes.NotFound {
+			return &api.Activity{}, ErrIDNotFound
+		} else {
+			return &api.Activity{}, fmt.Errorf("Unexpected retrieve failure %w", err)
+		}
+	}
+	return res, nil
+}
+
+func (c *Activities) List(ctx context.Context, offset int) ([]*api.Activity, error) {
+	res, err := c.client.List(ctx, &api.ListRequest{Offset: int32(offset)})
+	if err != nil {
+		// List from server returns only internal error now
+		// so, no need to check status code
+		acts := []*api.Activity{}
+		return acts, err
+	}
+
+	return res.Activities, nil
+}
+
+/*
 func (c *Activities) Insert(activity api.Activity) (int, error) {
 	activityDoc := api.ActivityDocument{Activity: activity}
 	jsBytes, err := json.Marshal(activityDoc)
@@ -27,7 +75,7 @@ func (c *Activities) Insert(activity api.Activity) (int, error) {
 	}
 
 	reader := bytes.NewReader(jsBytes)
-	// create new request to send data to server 
+	// create new request to send data to server
 	req, err := http.NewRequest(http.MethodPost, c.URL, reader)
 	if err != nil {
 		return 0, err
@@ -115,3 +163,4 @@ func (c *Activities) List(offset int) ([]api.Activity, error) {
 	}
 	return list, nil
 }
+*/
