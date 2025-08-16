@@ -1,13 +1,81 @@
 package server
 
 import (
-	"encoding/json"
+	"context"
 	"log"
-	"net/http"
 
-	"github.com/gorilla/mux"
-	api "github.com/pitchumani/activity-tracker/activity-log"
+	api "github.com/pitchumani/activity-tracker/activity-log/api/v1"
+
+	"google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
+/*
+   packages for httpServer
+	"encoding/json"
+	"net/http"
+	"github.com/gorilla/mux"
+*/
+
+// define grpc server
+type grpcServer struct {
+	api.UnimplementedActivity_LogServer
+	Activities *Activities
+}
+
+// define Insert Method for grpc server
+func (s *grpcServer) Insert(ctx context.Context, activity *api.Activity) (*api.InsertResponse, error) {
+	log.Println("grpcServer: Insert Method")
+	id, err := s.Activities.Insert(activity)
+	if err != nil {
+		log.Printf("Error: %s\n", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	res := api.InsertResponse{Id: int32(id)}
+	return &res, nil
+}
+
+// define Retrieve Method for grpc server
+func (s *grpcServer) Retrieve(ctx context.Context, req *api.RetrieveRequest) (*api.Activity, error) {
+	log.Println("grpcServer: Retrieve Method")
+	res, err := s.Activities.Retrieve(int(req.Id))
+	if err == ErrIDNotFound {
+		return nil, status.Error(codes.NotFound, "ID was not found")
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return res, nil
+}
+
+// define List Method for grpc server
+func (s *grpcServer) List(ctx context.Context, req *api.ListRequest) (*api.Activities, error) {
+	log.Println("grpcServer: List Method")
+	activities, err := s.Activities.List(int(req.Offset))
+	if err != nil {
+		log.Println("Internal error:", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	log.Println("Retrieved", len(activities), "rows")
+	return &api.Activities{Activities: activities}, nil
+}
+
+// create new GRPC server
+func NewGRPCServer() *grpc.Server {
+	var acc *Activities
+	var err error
+	if acc, err = NewActivities(); err != nil {
+		log.Fatal("Failed to initialize the GRPC server: ", err.Error())
+		return nil
+	}
+
+	gsrv := grpc.NewServer()
+	srv := grpcServer {
+		Activities: acc,
+	}
+	api.RegisterActivity_LogServer(gsrv, &srv)
+	return gsrv
+}
 
 // define type httpServer with activities data
 // add Methods to that type to handle GET and POST requests
@@ -15,7 +83,7 @@ import (
 type httpServer struct {
 	Activities *Activities
 }
-
+/*
 func (s *httpServer) handlePost(w http.ResponseWriter, r *http.Request) {
 	log.Printf("handlePost")
 	var req api.ActivityDocument
@@ -110,3 +178,4 @@ func NewHTTPServer(addr string) *http.Server {
 	}
 	return srv
 }
+*/

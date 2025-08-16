@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
-	api "github.com/pitchumani/activity-tracker/activity-log"
+	api "github.com/pitchumani/activity-tracker/activity-log/api/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	  _ "github.com/mattn/go-sqlite3"
 )
 
@@ -41,11 +43,11 @@ func NewActivities() (*Activities, error) {
 }
 
 // define a insert method for Activities type
-func (acts *Activities) Insert(activity api.Activity) (int, error) {
+func (acts *Activities) Insert(activity *api.Activity) (int, error) {
 	acts.mtx.Lock()
 	defer acts.mtx.Unlock()
 	res, err := acts.db.Exec("INSERT INTO activities VALUES(NULL,?,?);",
-		activity.Time, activity.Description)
+		activity.Time.AsTime(), activity.Description)
 	if err != nil {
 		return 0, err
 	}
@@ -61,7 +63,7 @@ func (acts *Activities) Insert(activity api.Activity) (int, error) {
 var ErrIDNotFound = fmt.Errorf("ID not found")
 
 // define a retrieve method for Activities type
-func (acts *Activities) Retrieve(id int) (api.Activity, error) {
+func (acts *Activities) Retrieve(id int) (*api.Activity, error) {
 	log.Printf("Getting id %d\n", id)
 	acts.mtx.Lock()
 	defer acts.mtx.Unlock()
@@ -73,16 +75,19 @@ func (acts *Activities) Retrieve(id int) (api.Activity, error) {
              WHERE id=?`, id)
 	activity := api.Activity{}
 	var err error
-	if err = row.Scan(&activity.ID, &activity.Time, &activity.Description);
+	// need to convert time into protobuf datatype timestamp
+	var time time.Time
+	if err = row.Scan(&activity.Id, &time, &activity.Description);
 	   err == sql.ErrNoRows {
 		log.Printf("ID %d is not found\n", id)
-		return activity, ErrIDNotFound
+		return &activity, ErrIDNotFound
 	}
-	return activity, err
+	activity.Time = timestamppb.New(time)
+	return &activity, err
 }
 
 // retrieve more rows for List Method
-func (acts *Activities) List(offset int) ([]api.Activity, error) {
+func (acts *Activities) List(offset int) ([]*api.Activity, error) {
 	log.Printf("Getting list from offset %d\n", offset)
 
 	rows, err := acts.db.Query(
@@ -93,14 +98,16 @@ func (acts *Activities) List(offset int) ([]api.Activity, error) {
 	}
 	defer rows.Close()
 
-	data := []api.Activity{}
+	data := []*api.Activity{}
 	for rows.Next() {
 		i := api.Activity{}
-		err = rows.Scan(&i.ID, &i.Time, &i.Description)
+		var time time.Time
+		err = rows.Scan(&i.Id, &time, &i.Description)
 		if err != nil {
 			return nil, err
 		}
-		data = append(data, i)
+		i.Time = timestamppb.New(time)
+		data = append(data, &i)
 	}
 	return data, nil
 }
