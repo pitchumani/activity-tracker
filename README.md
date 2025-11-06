@@ -1,7 +1,7 @@
 # Activity Tracker
 Activity tracker using Go
 
-It is a JSON HTTP web service.
+It provides web services in both JSON HTTP and gRPC.
 
 ## APIs
 ### insert data
@@ -57,6 +57,12 @@ grpcurl -plaintext -d '{ "id": 1 }' -proto ./activity-log/api/v1/activity.proto 
   - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 * grpcurl - to make grpc service request in human readable JSON like form
+
+## gRPC Gateway
+1. Build a proxy using grpc-gateway and an existing proto file. Only way if there a gRPC service.
+2. Build a REST service, using same proto file. And that uses the same implementation
+as existing gRPC service.
+3. TBD - change gRPC service to answer both REST and gRPC requests
 
 ## Credits
 Following the [example by Adam Gordon Bell](https://earthly.dev/blog/golang-http/).
